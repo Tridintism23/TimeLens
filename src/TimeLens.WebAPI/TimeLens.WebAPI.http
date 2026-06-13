@@ -1,0 +1,6 @@
+@TimeLens.WebAPI_HostAddress = http://localhost:5227
+
+GET {{TimeLens.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
