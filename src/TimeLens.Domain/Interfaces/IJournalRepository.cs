@@ -13,7 +13,7 @@ namespace TimeLens.Domain.Interfaces
 
         Task<List<JournalEntry>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
 
-        Task<JournalEntry?> GetTodayEntryAsync(Guid userId, DateTime? date, CancellationToken ct = default);
+        Task<JournalEntry?> GetTodayEntryAsync(Guid userId, CancellationToken ct = default);
 
         Task<List<JournalEntry>> GetByDateRangeAsync(Guid userId, DateTime from, DateTime to, CancellationToken ct = default);
 
