@@ -23,8 +23,11 @@ namespace TimeLens.Domain.Entities
         private JournalEntry() { }
 
         // Factory method tạo JournalEntry
-        public static JournalEntry Create(string? title, string content, Guid userId)
+        public static JournalEntry Create(Guid userId, string? title, string? content)
         {
+            if(userId == Guid.Empty) 
+                throw new ArgumentException("UserId không hợp lệ");
+            
             return new JournalEntry()
             {
                 Id = Guid.NewGuid(),
@@ -37,7 +40,7 @@ namespace TimeLens.Domain.Entities
         }
 
         // Behavior method — logic nằm trong Entity, không nằm rải rác ở Service
-        public void Update(string title, string content)
+        public void Update(string? title, string? content)
         {
             Title = title?.Trim() ?? string.Empty;
             Content = content?.Trim() ?? string.Empty;

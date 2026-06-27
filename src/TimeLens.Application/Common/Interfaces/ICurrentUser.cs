@@ -9,7 +9,7 @@ namespace TimeLens.Application.Common.Interfaces
 {
     public interface ICurrentUser
     {
-        string Id { get; }
+        Guid Id { get; }
         string Email { get; }
         bool IsAuthenticated { get; }
     }
