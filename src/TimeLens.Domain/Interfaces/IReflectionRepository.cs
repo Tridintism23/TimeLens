@@ -17,7 +17,7 @@ namespace TimeLens.Domain.Interfaces
 
         Task<List<ReflectionEntry>> GetUnansweredByUserIdAsync (Guid userId, CancellationToken ct = default);
 
-        Task AddSync (ReflectionEntry entry, CancellationToken ct = default);
+        Task AddAsync (ReflectionEntry entry, CancellationToken ct = default);
 
         Task UpdateAsync (ReflectionEntry entry, CancellationToken ct = default);
 

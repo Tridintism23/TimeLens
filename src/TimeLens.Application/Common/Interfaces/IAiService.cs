@@ -9,7 +9,7 @@ namespace TimeLens.Application.Common.Interfaces
 {
     public interface IAiService
     {
-        Task<string> GenerateReflectioQuestionsAsync(string journalContent, PhilosophyType philosophy, CancellationToken ct = default);
+        Task<string> GenerateReflectionQuestionsAsync(string journalContent, string systemPrompt, CancellationToken ct = default);
 
         Task<string> GenerateTitleAsync(string journalContent, CancellationToken ct = default);
 

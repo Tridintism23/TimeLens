@@ -18,7 +18,7 @@ namespace TimeLens.Infrastructure.Repositories
         {
             _context = context;
         }
-        public async Task AddSync(ReflectionEntry entry, CancellationToken ct = default)
+        public async Task AddAsync(ReflectionEntry entry, CancellationToken ct = default)
         {
             await _context.ReflectionEntries.AddAsync(entry, ct);
         }
