@@ -45,6 +45,11 @@ namespace TimeLens.Infrastructure.Repositories
                 .ToListAsync(ct);
         }
 
+        public async Task AddMessageAsync(Message message, CancellationToken ct = default)
+        {
+            await _context.Messages.AddAsync(message, ct);
+        }
+
         public async Task SaveChangesAsync(CancellationToken ct = default)
         {
             await _context.SaveChangesAsync(ct);

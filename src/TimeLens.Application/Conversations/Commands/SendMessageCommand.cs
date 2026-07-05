@@ -30,16 +30,20 @@ namespace TimeLens.Application.Conversations.Commands
             _currentUser = currentUser;
         }
 
-        public async Task<SendMessageResult> Handle(SendMessageCommand request, CancellationToken ct)
+        public async Task<SendMessageResult> Handle(
+    SendMessageCommand request, CancellationToken ct)
         {
-            var conversation = await _conversationRepository.GetByIdWithMessagesAsync(request.ConversationId, ct);
+            // 1. Lấy conversation và validate
+            var conversation = await _conversationRepository
+                .GetByIdAsync(request.ConversationId, ct);
 
             if (conversation is null || conversation.UserId != _currentUser.Id)
-            {
-                return new SendMessageResult(false, null, "Không tìm thấy cuộc trò chuyện.");
-            }
+                return new SendMessageResult(false, null,
+                    "Không tìm thấy cuộc trò chuyện.");
 
-            var journals = await _journalRepository.GetByUserIdAsync(_currentUser.Id, ct);
+            // 2. Lấy toàn bộ nhật ký làm context cho AI
+            var journals = await _journalRepository
+                .GetByUserIdAsync(_currentUser.Id, ct);
 
             var journalContext = journals
                 .Where(j => j.HasContent())
@@ -47,31 +51,44 @@ namespace TimeLens.Application.Conversations.Commands
                 .Select(j => $"[{j.CreatedAt:dd/MM/yyyy}]: {j.Content}")
                 .ToList();
 
-            var systemPrompt = new AiPromptBuilder().WithBaseInstruction(
-                """
-                Bạn đang đóng vai "phiên bản quá khứ" của người dùng này.
-                Dưới đây là toàn bộ nhật ký họ đã viết theo thời gian.
-                Hãy trả lời như thể bạn chính là họ — dùng ngôi thứ nhất,
-                chân thật với cảm xúc và suy nghĩ được ghi lại trong nhật ký.
-                Nếu câu hỏi liên quan đến thời điểm cụ thể, hãy tham chiếu
-                đúng nội dung nhật ký của ngày đó.
-                """)
+            // 3. Builder xây dựng system prompt
+            var systemPrompt = new AiPromptBuilder()
+                .WithBaseInstruction(
+                    """
+                    Bạn đang đóng vai "phiên bản quá khứ" của người dùng này.
+                    Dưới đây là toàn bộ nhật ký họ đã viết theo thời gian.
+                    Hãy trả lời như thể bạn chính là họ — dùng ngôi thứ nhất,
+                    chân thật với cảm xúc và suy nghĩ được ghi lại trong nhật ký.
+                    QUAN TRỌNG: Chỉ trả lời bằng tiếng Việt, không dùng ngôn ngữ khác.
+                    """)
                 .WithJournalContext(journalContext)
                 .BuildSystemPrompt();
 
-            var userMessage = Message.CreateUserMessage(request.ConversationId, request.Content);
+            // 4. Lưu tin nhắn user — thêm trực tiếp vào DbContext
+            var userMessage = Message.CreateUserMessage(
+                request.ConversationId,
+                request.Content);
 
-            conversation.Messages.Add(userMessage);
-            conversation.UpdateLastMessageTime();
+            await _conversationRepository.AddMessageAsync(userMessage, ct);
 
+            // 5. Gọi AI
             var aiResponse = await _aiService.ChatWithPastSelfAsync(
-                request.Content, journalContext, ct);
+                request.Content,
+                journalContext,
+                ct);
 
-            var assistantMessage = Message.CreateAssistantMessage(request.ConversationId, aiResponse);
+            // 6. Lưu response AI — thêm trực tiếp vào DbContext
+            var assistantMessage = Message.CreateAssistantMessage(
+                request.ConversationId,
+                aiResponse);
 
-            conversation.Messages.Add(assistantMessage);
+            await _conversationRepository.AddMessageAsync(assistantMessage, ct);
 
+            // 7. Update LastMessageTime của conversation
+            conversation.UpdateLastMessageTime();
             await _conversationRepository.UpdateAsync(conversation, ct);
+
+            // 8. Một lần SaveChanges duy nhất — Unit of Work pattern
             await _conversationRepository.SaveChangesAsync(ct);
 
             return new SendMessageResult(true, aiResponse, null);
