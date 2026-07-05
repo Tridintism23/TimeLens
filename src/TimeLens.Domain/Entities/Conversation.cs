@@ -19,7 +19,7 @@ namespace TimeLens.Domain.Entities
         private Conversation() { }
 
         // Factory method tạo Conversation
-        public static Conversation Create(Guid userId, string title)
+        public static Conversation Create(Guid userId, string? title = null)
         {
             if (userId == Guid.Empty)
             {
