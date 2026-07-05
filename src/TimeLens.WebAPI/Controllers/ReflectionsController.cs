@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TimeLens.Application.Reflections.Commands;
+using TimeLens.Application.Reflections.Queries;
 
 namespace TimeLens.WebAPI.Controllers
 {
@@ -35,6 +36,14 @@ namespace TimeLens.WebAPI.Controllers
             {
                 return StatusCode(429, new { message = ex.Message });
             }
+        }
+
+        // GET /api/reflections/weekly-insight?from=2026-06-01&to=2026-06-30
+        [HttpGet("weekly-insight")]
+        public async Task<IActionResult> GetWeeklyInsight([FromQuery] DateTime from, [FromQuery] DateTime to)
+        {
+            var insight = await _mediator.Send(new GetWeeklyInsightQuery(from, to));
+            return Ok(new { insight }); 
         }
     }
 }

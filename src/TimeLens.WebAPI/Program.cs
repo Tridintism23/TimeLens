@@ -28,6 +28,7 @@ builder.Services.AddScoped<IPhilosophyStrategy, StoicismStrategy>();
 builder.Services.AddScoped<IPhilosophyStrategy, AristotleStrategy>();
 builder.Services.AddScoped<IPhilosophyStrategy, ConfuciusStrategy>();
 builder.Services.AddScoped<IPhilosophyStrategy, NietzscheStrategy>();
+builder.Services.AddScoped<ReflectionEngine>();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
