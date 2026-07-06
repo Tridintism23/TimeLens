@@ -1,0 +1,130 @@
+﻿@page "/chat"
+@inject ConversationService ConversationService
+
+<PageTitle>Chat với quá khứ — TimeLens</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">💬 Cuộc trò chuyện</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudIconButton Icon="@Icons.Material.Filled.Add"
+                        OnClick="StartNewConversation" />
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                @foreach (var conv in conversations)
+                {
+                    <MudListItem T="string" OnClick="() => SelectConversation(conv.Id)"
+                        Class="@(selectedId == conv.Id ? "mud-selected-item" : "")">
+                        <MudText Typo="Typo.body2">@conv.Title</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @conv.LastMessageAt.ToString("dd/MM/yyyy")
+                        </MudText>
+                    </MudListItem>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="8">
+        @if (selectedId.HasValue)
+        {
+            <MudCard Elevation="2" Style="height: 600px; display: flex; flex-direction: column;">
+                <MudCardContent Style="flex: 1; overflow-y: auto;">
+                    @foreach (var msg in messages)
+                    {
+                        <div class="@(msg.Role == "User" ? "d-flex justify-end mb-2" : "d-flex justify-start mb-2")">
+                            <MudPaper Elevation="1" Class="@($"pa-3 {(msg.Role == "User" ? "mud-theme-primary" : "")}")"
+                                      Style="max-width: 75%; white-space: pre-line">
+                                <MudText Typo="Typo.body2">@msg.Content</MudText>
+                            </MudPaper>
+                        </div>
+                    }
+                    @if (isWaiting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    }
+                </MudCardContent>
+                <MudCardActions>
+                    <MudTextField @bind-Value="newMessage"
+                        Label="Hỏi bản thân quá khứ..."
+                        Variant="Variant.Outlined" FullWidth="true"
+                        Adornment="Adornment.End"
+                        AdornmentIcon="@Icons.Material.Filled.Send"
+                        OnAdornmentClick="SendMessage"
+                        OnKeyUp="HandleKeyUp" />
+                </MudCardActions>
+            </MudCard>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">
+                Chọn hoặc tạo cuộc trò chuyện để bắt đầu chat với bản thân quá khứ.
+            </MudAlert>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    List<ConversationDto> conversations = new();
+    List<MessageDto> messages = new();
+    Guid? selectedId = null;
+    string newMessage = "";
+    bool isWaiting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        conversations = await ConversationService.GetAllAsync();
+    }
+
+    async Task StartNewConversation()
+    {
+        var id = await ConversationService.StartAsync("Cuộc trò chuyện mới");
+        if (id.HasValue)
+        {
+            conversations = await ConversationService.GetAllAsync();
+            await SelectConversation(id.Value);
+        }
+    }
+
+    async Task SelectConversation(Guid id)
+    {
+        selectedId = id;
+        messages = new List<MessageDto>();
+        await Task.CompletedTask;
+    }
+
+    async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage) || !selectedId.HasValue)
+            return;
+
+        var userMsg = new MessageDto(Guid.NewGuid(), "User", newMessage, DateTime.Now);
+        messages.Add(userMsg);
+
+        var sentMessage = newMessage;
+        newMessage = "";
+        isWaiting = true;
+
+        var response = await ConversationService
+            .SendMessageAsync(selectedId.Value, sentMessage);
+
+        if (response is not null)
+        {
+            messages.Add(new MessageDto(
+                Guid.NewGuid(), "Assistant", response, DateTime.Now));
+        }
+
+        isWaiting = false;
+    }
+
+    async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SendMessage();
+    }
+}

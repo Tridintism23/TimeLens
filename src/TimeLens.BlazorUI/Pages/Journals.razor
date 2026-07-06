@@ -1,0 +1,169 @@
+﻿@page "/journals"
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+
+<PageTitle>Nhật ký — TimeLens</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">📖 Nhật ký của tôi</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="5">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">
+                        @(editingId.HasValue ? "Chỉnh sửa" : "Viết nhật ký hôm nay")
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTextField @bind-Value="title" Label="Tiêu đề (tùy chọn)"
+                    Variant="Variant.Outlined" Class="mb-3" />
+                <MudTextField @bind-Value="content" Label="Nội dung"
+                    Variant="Variant.Outlined" Lines="8" Class="mb-3" />
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                    OnClick="SaveEntry" Disabled="isLoading">
+                    @(isLoading ? "Đang lưu..." : "Lưu")
+                </MudButton>
+                @if (editingId.HasValue)
+                {
+                    <MudButton Variant="Variant.Text" OnClick="CancelEdit">
+                        Hủy
+                    </MudButton>
+                }
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="7">
+        @if (isLoadingList)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (!entries.Any())
+        {
+            <MudAlert Severity="Severity.Info">
+                Chưa có nhật ký nào. Hãy bắt đầu viết!
+            </MudAlert>
+        }
+        else
+        {
+            @foreach (var entry in entries)
+            {
+                <MudCard Elevation="1" Class="mb-3">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle1">
+                                @(string.IsNullOrEmpty(entry.Title)
+                                    ? "Không có tiêu đề"
+                                    : entry.Title)
+                        @if (entry.IsTitleAiGenerated)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">✨ AI</MudChip>
+                                }
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @entry.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                Size="Size.Small"
+                                OnClick="() => StartEdit(entry)" />
+                        <MudTooltip Text="Generate reflection">
+                            <MudIconButton Icon="@Icons.Material.Filled.AutoAwesome"
+                                           Size="Size.Small" Color="Color.Secondary"
+                                           OnClick="() => GenerateReflection(entry.Id)" />
+                        </MudTooltip>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText>
+                            @(entry.Content.Length > 150
+                                ? entry.Content[..150] + "..."
+                                : entry.Content)
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
+    </MudItem>
+</MudGrid>
+
+@if (!string.IsNullOrEmpty(reflectionQuestions))
+{
+    <MudDialog @bind-Visible="showReflection">
+        <TitleContent>✨ Câu hỏi reflection hôm nay</TitleContent>
+        <DialogContent>
+            <MudText Style="white-space: pre-line">@reflectionQuestions</MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="() => showReflection = false">Đóng</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    List<JournalEntryDto> entries = new();
+    string title = "";
+    string content = "";
+    Guid? editingId = null;
+    bool isLoading = false;
+    bool isLoadingList = true;
+    string reflectionQuestions = "";
+    bool showReflection = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEntries();
+    }
+
+    async Task LoadEntries()
+    {
+        isLoadingList = true;
+        entries = await JournalService.GetAllAsync();
+        isLoadingList = false;
+    }
+
+    async Task SaveEntry()
+    {
+        isLoading = true;
+
+        if (editingId.HasValue)
+            await JournalService.UpdateAsync(editingId.Value, title, content);
+        else
+            await JournalService.CreateAsync(title, content);
+
+        title = "";
+        content = "";
+        editingId = null;
+        await LoadEntries();
+        isLoading = false;
+    }
+
+    void StartEdit(JournalEntryDto entry)
+    {
+        editingId = entry.Id;
+        title = entry.Title;
+        content = entry.Content;
+    }
+
+    void CancelEdit()
+    {
+        editingId = null;
+        title = "";
+        content = "";
+    }
+
+    async Task GenerateReflection(Guid journalId)
+    {
+        var questions = await JournalService.GenerateReflectionAsync(journalId);
+        if (questions is not null)
+        {
+            reflectionQuestions = questions;
+            showReflection = true;
+        }
+    }
+}

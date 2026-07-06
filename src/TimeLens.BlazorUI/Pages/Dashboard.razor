@@ -1,0 +1,113 @@
+﻿@page "/dashboard"
+@inject JournalService JournalService
+
+<PageTitle>Dashboard — TimeLens</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">📊 Dashboard</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    @totalEntries
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Tổng số nhật ký
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Color="Color.Secondary">
+                    @streakDays ngày
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Streak hiện tại
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Color="Color.Tertiary">
+                    @lastEntryDate
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Lần viết gần nhất
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">📅 Timeline nhật ký</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @foreach (var entry in recentEntries)
+                {
+                    <MudTimelineItem Color="Color.Primary" Size="Size.Small">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @entry.CreatedAt.ToString("dd/MM/yyyy")
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @(string.IsNullOrEmpty(entry.Title)
+                                                    ? "Không có tiêu đề"
+                                                    : entry.Title)
+                    </MudText>
+                </MudTimelineItem>
+                                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    int totalEntries = 0;
+    int streakDays = 0;
+    string lastEntryDate = "Chưa có";
+    List<JournalEntryDto> recentEntries = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var entries = await JournalService.GetAllAsync();
+        totalEntries = entries.Count;
+        recentEntries = entries.Take(10).ToList();
+
+        if (entries.Any())
+        {
+            lastEntryDate = entries.First().CreatedAt.ToString("dd/MM/yyyy");
+            streakDays = CalculateStreak(entries);
+        }
+    }
+
+    int CalculateStreak(List<JournalEntryDto> entries)
+    {
+        var streak = 0;
+        var today = DateTime.UtcNow.Date;
+        var distinctDays = entries
+            .Select(e => e.CreatedAt.Date)
+            .Distinct()
+            .OrderByDescending(d => d)
+            .ToList();
+
+        for (int i = 0; i < distinctDays.Count; i++)
+        {
+            if (distinctDays[i] == today.AddDays(-i))
+                streak++;
+            else
+                break;
+        }
+
+        return streak;
+    }
+}

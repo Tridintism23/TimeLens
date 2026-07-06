@@ -1,0 +1,61 @@
+﻿@page "/register"
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Đăng ký — TimeLens</PageTitle>
+
+<MudCard Elevation="4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h5" Align="Align.Center">Tạo tài khoản</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudTextField @bind-Value="fullName" Label="Họ tên"
+                      Variant="Variant.Outlined" Class="mb-4" />
+        <MudTextField @bind-Value="email" Label="Email"
+                      Variant="Variant.Outlined" Class="mb-4" />
+        <MudTextField @bind-Value="password" Label="Mật khẩu"
+                      Variant="Variant.Outlined" InputType="InputType.Password"
+                      Class="mb-4" />
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+        }
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   FullWidth="true" OnClick="HandleRegister" Disabled="isLoading">
+            @(isLoading ? "Đang đăng ký..." : "Đăng ký")
+        </MudButton>
+    </MudCardActions>
+    <MudCardContent>
+        <MudText Align="Align.Center">
+            Đã có tài khoản?
+            <MudLink Href="/login">Đăng nhập</MudLink>
+        </MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    string fullName = "";
+    string email = "";
+    string password = "";
+    string errorMessage = "";
+    bool isLoading = false;
+
+    async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        var success = await AuthService.RegisterAsync(email, fullName, password);
+
+        if (success)
+            Navigation.NavigateTo("/journals");
+        else
+            errorMessage = "Đăng ký thất bại. Email có thể đã được sử dụng.";
+
+        isLoading = false;
+    }
+}

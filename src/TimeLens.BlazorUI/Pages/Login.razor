@@ -1,0 +1,64 @@
+﻿@page "/login"
+@page "/"
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Đăng nhập — TimeLens</PageTitle>
+
+<MudCard Elevation="4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h4" Align="Align.Center">⏳ TimeLens</MudText>
+            <MudText Typo="Typo.subtitle1" Align="Align.Center" Color="Color.Secondary">
+                Lưu giữ và đối thoại với bản thân quá khứ
+            </MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudTextField @bind-Value="email" Label="Email"
+                      Variant="Variant.Outlined" Class="mb-4" />
+        <MudTextField @bind-Value="password" Label="Mật khẩu"
+                      Variant="Variant.Outlined" InputType="InputType.Password"
+                      Class="mb-4" />
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">
+                @errorMessage
+            </MudAlert>
+        }
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   FullWidth="true" OnClick="HandleLogin" Disabled="isLoading">
+            @(isLoading ? "Đang đăng nhập..." : "Đăng nhập")
+        </MudButton>
+    </MudCardActions>
+    <MudCardContent>
+        <MudText Align="Align.Center">
+            Chưa có tài khoản?
+            <MudLink Href="/register">Đăng ký</MudLink>
+        </MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    string email = "";
+    string password = "";
+    string errorMessage = "";
+    bool isLoading = false;
+
+    async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        var success = await AuthService.LoginAsync(email, password);
+
+        if (success)
+            Navigation.NavigateTo("/journals");
+        else
+            errorMessage = "Email hoặc mật khẩu không đúng.";
+
+        isLoading = false;
+    }
+}
